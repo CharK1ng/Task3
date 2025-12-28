@@ -13,6 +13,9 @@ import javax.imageio.ImageIO;
 
 public class DurakGameUI extends JFrame {
     private final Game game;
+    private GameTimer gameTimer; // Новый класс для таймера
+    private Timer uiUpdateTimer; // Таймер для обновления UI
+    private JLabel timerLabel; // Лейбл для отображения времени
 
     private JLabel trumpLabel;
     private JLabel currentPlayerLabel;
@@ -51,13 +54,32 @@ public class DurakGameUI extends JFrame {
         pack();
         setVisible(true);
 
+        // Запуск таймера только в игровом режиме (не в testerMode)
+        if (!isTesterMode) {
+            gameTimer = new GameTimer(300000, () -> { // 300000 мс = 5 минут
+                JOptionPane.showMessageDialog(this, "Вы медленный *подмигнул*", "Время вышло!", JOptionPane.WARNING_MESSAGE);
+                System.exit(0); // Завершаем игру
+            });
+            gameTimer.start();
+
+            // Таймер для обновления UI каждую секунду
+            uiUpdateTimer = new Timer(1000, e -> updateTimerLabel());
+            uiUpdateTimer.start();
+        }
+
         if (isTesterMode) {
             new Thread(game::runTesterMode).start();
         }
     }
 
+    private void updateTimerLabel() {
+        if (gameTimer != null) {
+            timerLabel.setText("Оставшееся время: " + gameTimer.getRemainingTimeFormatted());
+        }
+    }
+
     private void initializeUI() {
-        JPanel topPanel = new JPanel(new GridLayout(2, 1));
+        JPanel topPanel = new JPanel(new GridLayout(3, 1)); // Изменено на 3 строки для таймера
         topPanel.setBackground(new Color(34, 139, 34));
         topPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
@@ -70,8 +92,13 @@ public class DurakGameUI extends JFrame {
         currentPlayerLabel.setFont(new Font("Arial", Font.BOLD, 16));
         currentPlayerLabel.setForeground(Color.WHITE);
 
+        timerLabel = new JLabel("Оставшееся время: 05:00", SwingConstants.CENTER); // Начальное значение
+        timerLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        timerLabel.setForeground(Color.YELLOW);
+
         topPanel.add(trumpLabel);
         topPanel.add(currentPlayerLabel);
+        topPanel.add(timerLabel); // Добавлен лейбл таймера
         add(topPanel, BorderLayout.NORTH);
 
         JPanel centerPanel = new JPanel(new BorderLayout());
@@ -306,6 +333,8 @@ public class DurakGameUI extends JFrame {
             handPanel.removeAll();
             takeButton.setEnabled(false);
             passButton.setEnabled(false);
+            if (gameTimer != null) gameTimer.stop();
+            if (uiUpdateTimer != null) uiUpdateTimer.stop();
         }
     }
 }
